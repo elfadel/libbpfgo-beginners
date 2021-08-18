@@ -6,8 +6,8 @@ import (
 	bpf "github.com/aquasecurity/tracee/libbpfgo"
 )
 import (
-	"fmt"
 	"os"
+	"unsafe"
 	"os/signal"
 )
 
@@ -20,39 +20,27 @@ func main() {
 	defer bpfModule.Close()
 
 	err = bpfModule.BPFLoadObject()
-	must(err)
+	must(err)	
 
 	prog, err := bpfModule.GetProgram("hello")
 	must(err)
 	_, err = prog.AttachKprobe(sys_execve)
 	must(err)
 
+	sub_prog, err := bpfModule.GetProgram("sub_hello")
+	must(err)
+	sub_prog_fd := sub_prog.GetFd()
+
+	prog_map, err := bpfModule.GetMap("prog_array")
+	must(err)
+
+	// Here, we can update first the main prog hello if necessary
+	err = prog_map.Update(unsafe.Pointer(&sub1_prog_index), unsafe.Pointer(&sub_prog_fd))
+	must(err)
+
 	go bpf.TracePrint()
 
-	prog, err = bpfModule.GetProgram("hello_bpftrace")
-	must(err)
-	_, err = prog.AttachRawTracepoint("sys_enter")
-	must(err)
-
-	e := make(chan []byte, 300)
-	p, err := bpfModule.InitPerfBuf("events", e, nil, 1024)
-	must(err)
-
-	p.Start()
-
-	counter := make(map[string]int, 350)
-	go func() {
-		for data := range e {
-			comm := string(data)
-			counter[comm]++
-		}
-	}()
-
 	<-sig
-	p.Stop()
-	for comm, n := range counter {
-		fmt.Printf("%s: %d\n", comm, n)
-	}
 }
 
 func must(err error) {

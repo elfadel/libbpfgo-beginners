@@ -12,6 +12,7 @@
 #include <bpf/bpf_helpers.h>
 
 typedef __u64 u64;
+typedef __u32 u32;
 
 /* TODO!! This is too generic for this example, where can we pull it from? 
 */

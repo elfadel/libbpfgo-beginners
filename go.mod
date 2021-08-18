@@ -1,4 +1,4 @@
-module github.com/lizrice/ebpf-beginners
+module github.com/elfadel/libbpfgo-beginners
 
 go 1.15
 

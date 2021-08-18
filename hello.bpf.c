@@ -1,22 +1,24 @@
 // +build ignore
 #include "hello.bpf.h"
 
-// Example: tracing a message on a kprobe
-SEC("kprobe/sys_execve")
-int hello(void *ctx)
-{
-    bpf_printk("I'm alive!");
+struct bpf_map_def SEC("maps") prog_array = {
+    .type = BPF_MAP_TYPE_PROG_ARRAY,
+    .key_size = sizeof(u32),
+    .value_size = sizeof(u32),
+    .max_entries = 32,
+};
+
+SEC("kprobe/sub_sys_execve")
+int sub_hello(void *ctx) {
+    bpf_printk("people !\n");
     return 0;
 }
 
-// Example of passing data using a perf map
-// Similar to bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count();}'
-BPF_PERF_OUTPUT(events)
-SEC("raw_tracepoint/sys_enter")
-int hello_bpftrace(void *ctx)
+SEC("kprobe/sys_execve")
+int hello(void *ctx)
 {
-    char data[100];
-    bpf_get_current_comm(&data, 100);
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &data, 100);
+    u32 id = 1;
+    bpf_printk("Hello ");
+    bpf_tail_call(ctx, &prog_array, id);
     return 0;
 }
